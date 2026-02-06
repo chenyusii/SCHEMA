@@ -1033,7 +1033,6 @@ class BasicBlockCIFAR(nn.Module):
             proj = nn.Sequential(conv1x1(in_planes, planes, stride=stride), nn.BatchNorm2d(planes))
             setattr(self, self._proj_name, proj)
 
-    # # for 菠萝权重
     # def _optionA_identity(self, x: torch.Tensor) -> torch.Tensor:
     #     # FX-friendly parameter-free shortcut (CIFAR ResNet Option A)
     #     y = x
@@ -1050,7 +1049,6 @@ class BasicBlockCIFAR(nn.Module):
     #         return torch.cat([y, pad], dim=1)
     #     return y[:, :c_out, :, :]
 
-    # for fhe-mp-cnn 权重
     def _optionA_identity(self, x: torch.Tensor) -> torch.Tensor:
         y = x
         st = int(self.stride)
@@ -1068,7 +1066,7 @@ class BasicBlockCIFAR(nn.Module):
             padL = y.new_zeros((n, pad_left, h, w))
             padR = y.new_zeros((n, pad_right, h, w))
             return torch.cat([padL, y, padR], dim=1)
-        # (一般 CIFAR ResNet 不会走到这里，但给完整性)
+
         cut = c_in - c_out
         cut_left = cut // 2
         return y[:, cut_left:cut_left + c_out, :, :]
@@ -1706,7 +1704,6 @@ class SiteActivation(nn.Module):
         self.register_buffer("total_cnt", torch.zeros((), dtype=torch.int64), persistent=False)
         self.register_buffer("fallback_cnt", torch.zeros((), dtype=torch.int64), persistent=False)
 
-        # 可选：按样本统计
         self.register_buffer("bad_sample_cnt_t", torch.zeros((), dtype=torch.int64), persistent=False)
         self.register_buffer("bad_sample_cnt_y", torch.zeros((), dtype=torch.int64), persistent=False)
 
@@ -1764,10 +1761,8 @@ class SiteActivation(nn.Module):
             clamp_t = float(REPAIR_T_CLAMP)
             if clamp_t > 0:
                 bad_t = (~torch.isfinite(t)) | (t.abs() > clamp_t)
-                # 在 forward 里，在你构造 bad_t / bad_y 后加：
                 self.total_cnt += t.numel()
                 self.repair_t_cnt += bad_t.sum().to(torch.int64)
-                # 可选：按样本统计“是否出现过坏点”
                 B = t.shape[0]
                 self.bad_sample_cnt_t += bad_t.view(B, -1).any(dim=1).sum().to(torch.int64)
                 t_safe = torch.nan_to_num(t, nan=0.0, posinf=0.0, neginf=0.0)
@@ -1792,9 +1787,8 @@ class SiteActivation(nn.Module):
             clamp_y = float(REPAIR_Y_CLAMP)
             if clamp_y > 0:
                 bad_y = (~torch.isfinite(y)) | (y.abs() > clamp_y)
-                # 在 forward 里，在你构造 bad_t / bad_y 后加：
                 self.total_cnt += t.numel()
-                self.fallback_cnt += bad_y.sum().to(torch.int64)  # fallback 就是 bad_y 的子集/等价
+                self.fallback_cnt += bad_y.sum().to(torch.int64)
                 B = y.shape[0]
                 self.bad_sample_cnt_y += bad_y.view(B, -1).any(dim=1).sum().to(torch.int64)
                 if REPAIR_FALLBACK_TO_RELU:
