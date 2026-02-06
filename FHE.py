@@ -16,7 +16,7 @@ DATA_DIR = os.environ["DATA_DIR"]
 import sys
 
 sys.stdout = open("log_32.txt", "a", encoding="utf-8", buffering=1)
-sys.stderr = sys.stdout  # 可选
+sys.stderr = sys.stdout 
 
 
 # 95, 919/1000
